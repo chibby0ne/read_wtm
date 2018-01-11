@@ -8,8 +8,9 @@ import (
 
 // Json representation of config file
 type ConfigFileJson struct {
-	GPU       GPUConfig `json:"gpu"`
-	CostPerKw float64   `json:"cost_per_kw"`
+	GPU            GPUConfig `json:"gpu"`
+	CostPerKw      float64   `json:"cost_per_kw"`
+	MinerDirectory string    `json:"miner_directory"`
 }
 
 // Each GPU type possible
@@ -38,7 +39,8 @@ Example configuration file:
 		"1070": 4,
 		"1080": 5
 	},
-	"cost_per_kw": 0.3
+	"cost_per_kw": 0.3,
+    "miner_directory": "C:\Users\username\miners"
 }
 */
 func readConfig(configFile string, target interface{}) {

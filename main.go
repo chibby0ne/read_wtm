@@ -4,6 +4,9 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
+	"io/ioutil"
+	"log"
+	"path/filepath"
 	"reflect"
 	"strconv"
 	"strings"
@@ -17,6 +20,9 @@ var config ConfigFileJson
 
 // instance GPU that contains the total hashing rate and power for all the GPUS listed in conf.json
 var totalGPUsCharacteristics GPU
+
+// directory containing the miners
+var minersDirectory string
 
 func init() {
 	// initialize array that contains names of gpus
@@ -64,6 +70,7 @@ func init() {
 	configFilePathPtr := flag.String("config", "./conf.json", "Config file with mining rig specs")
 	flag.Parse()
 	readConfig(*configFilePathPtr, &config)
+	minersDirectory = config.MinerDirectory
 
 	// store the gpus and quantities used (taken from conf.json)
 	r := reflect.ValueOf(config.GPU)
@@ -203,9 +210,7 @@ func writeOneParameterQuery(buffer *bytes.Buffer, s, t string) {
 	}
 }
 
-var activeGPUs []GPU
-
-func constructUrlQuery(config ConfigFileJson, totalGPUsCharacteristics GPU) string {
+func constructUrlQuery() string {
 	var buffer bytes.Buffer
 	buffer.WriteString("https://whattomine.com/coins.json?utf8=%E2%9C%93&")
 	writeOneParameterQuery(&buffer, "adapt_q_280x=", strconv.FormatUint(config.GPU.GPU280x, 10))
@@ -341,14 +346,17 @@ func constructUrlQuery(config ConfigFileJson, totalGPUsCharacteristics GPU) stri
 	// Cost and rest of url//
 
 	buffer.WriteString("factor%5Bcost%5D=" + strconv.FormatFloat(config.CostPerKw, 'f', 1, 64) + "&")
-	buffer.WriteString("sort=Profitability24&volume=0&revenue=24h&factor%5Bexchanges%5D%5B%5D=&factor%5Bexchanges%5D%5B%5D=abucoins&factor%5Bexchanges%5D%5B%5D=bitfinex&factor%5Bexchanges%5D%5B%5D=bittrex&factor%5Bexchanges%5D%5B%5D=bleutrade&factor%5Bexchanges%5D%5B%5D=cryptopia&factor%5Bexchanges%5D%5B%5D=hitbtc&factor%5Bexchanges%5D%5B%5D=poloniex&factor%5Bexchanges%5D%5B%5D=yobit&dataset=Main&commit=Calculate")
-	fmt.Println("Created correct url")
+	buffer.WriteString("sort=Profitability24&volume=0&revenue=24h&factor%5Bexchanges%5D%5B%5D=&factor%5Bexchanges%5D%5B%5D=abucoins&")
+	buffer.WriteString("factor%5Bexchanges%5D%5B%5D=bitfinex&factor%5Bexchanges%5D%5B%5D=bittrex&factor%5Bexchanges%5D%5B%5D=bleutrade&")
+	buffer.WriteString("factor%5Bexchanges%5D%5B%5D=cryptopia&factor%5Bexchanges%5D%5B%5D=hitbtc&factor%5Bexchanges%5D%5B%5D=poloniex&")
+	buffer.WriteString("factor%5Bexchanges%5D%5B%5D=yobit&dataset=Main&commit=Calculate")
 	return buffer.String()
 }
 
 func main() {
 	// read current values from www.whattomine.com
-	url := "https://whattomine.com/coins.json"
+	url := constructUrlQuery()
+	// url := "https://whattomine.com/coins.json"
 	var coins Coins
 	readJsonFromUrl(url, &coins)
 
@@ -363,6 +371,7 @@ func main() {
 	// Convert bitcoin price to float64
 	bitcoinPrice := convertToFloat64(bitcoin[0].Price_USD)
 	for coinName, coinContent := range coins.Coins {
+		fmt.Println(coinName)
 		dailyDollarRevenue[coinName] = convertToFloat64(coinContent.Btc_revenue24) * bitcoinPrice
 	}
 
@@ -373,5 +382,28 @@ func main() {
 	for i := 0; i < len(sortedDailyDollarRevenue); i++ {
 		fmt.Printf("%s = %f\n", sortedDailyDollarRevenue[i].key, sortedDailyDollarRevenue[i].value)
 	}
+
+	minersDirectory = filepath.Clean(minersDirectory)
+	files, err := ioutil.ReadDir(minersDirectory)
+	for err != nil {
+		log.Fatal(err)
+	}
+
+	minersScripts := make([]string, 10)
+	for i, file := range files {
+		fmt.Printf("minersScripts[%v] =  %v\n", i, file.Name())
+		minersScripts[i] = file.Name()
+	}
+
+	bestRevenue := -1000.0
+	var bestCoin string
+	for _, minerScriptName := range minersScripts {
+		coinName := strings.Split(minerScriptName, ".")[0]
+		if dailyDollarRevenue[coinName] > bestRevenue {
+			bestCoin = coinName
+			bestRevenue = dailyDollarRevenue[coinName]
+		}
+	}
+	fmt.Println("The best coin is: " + bestCoin + " with $ " + strconv.FormatFloat(bestRevenue, 'f', 6, 64) + " of revenue")
 
 }

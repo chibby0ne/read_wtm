@@ -7,6 +7,11 @@ import (
     "strconv"
 )
 
+const (
+    urlBase string = "https://whattomine.com/coins.json?utf8=%E2%9C%93&"
+    trueString string = "=true&"
+)
+
 // appends the strings adaptString and numberOfGPUs
 // additionally appends 
 func writeOneParameterQuery(buffer *bytes.Buffer, adaptString, numberOfGPUs string) {
@@ -16,14 +21,14 @@ func writeOneParameterQuery(buffer *bytes.Buffer, adaptString, numberOfGPUs stri
 	// Add adapt_MODEL=true& whenever there's > 0 cards for that model
 	if numberOfGPUs != "0" {
 		parts := strings.Split(adaptString, "_")
-		adapt_true := parts[0] + "_" + parts[2] + "=true&"
+		adapt_true := parts[0] + "_" + parts[2] + trueString
 		buffer.WriteString(adapt_true)
 	}
 }
 
 func constructUrlQuery() string {
 	var buffer bytes.Buffer
-	buffer.WriteString("https://whattomine.com/coins.json?utf8=%E2%9C%93&")
+	buffer.WriteString(urlBase)
 	writeOneParameterQuery(&buffer, "adapt_q_280x=", strconv.FormatUint(config.GPU.GPU280x, 10))
 	writeOneParameterQuery(&buffer, "adapt_q_380=", strconv.FormatUint(config.GPU.GPU380, 10))
 	writeOneParameterQuery(&buffer, "adapt_q_fury=", strconv.FormatUint(config.GPU.GPUFury, 10))

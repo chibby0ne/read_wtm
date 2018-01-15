@@ -8,6 +8,6 @@ miner, close the current running mining program, and open the other more
 profitable coin.
 
 This program automates just that process, gathering using the wonderful
-[whattomine](www.whattomine.com) page.
+[whattomine](https://whattomine.com) page.
 
 You can customize your rig setup in the `conf.json`.

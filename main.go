@@ -7,8 +7,12 @@ import (
 	"log"
 	"path/filepath"
 	"reflect"
-	"strconv"
+	"regexp"
 	"strings"
+)
+
+const (
+	REGEXP = `([G|g]obyte|[E|e]thereum|[T|t]rezarcoin|[Z|z]cash|[Z|z]classic|[Z|z]encash)`
 )
 
 // array that contains names of gpus
@@ -199,14 +203,12 @@ func init() {
 func main() {
 	// read current values from www.whattomine.com
 	url := constructUrlQuery()
-	// url := "https://whattomine.com/coins.json"
 	var coins Coins
 	readJsonFromUrl(url, &coins)
 
 	// read current value of bitcoin
-	url = "https://api.coinmarketcap.com/v1/ticker/bitcoin/"
 	bitcoin := make([]CoinMarketCapCoin, 0)
-	readJsonFromUrl(url, &bitcoin)
+	readJsonFromUrl(BITCOINURL, &bitcoin)
 
 	// Create map 'coinName' -> USD revenue 24 hr
 	dailyDollarRevenue := make(map[string]float64)
@@ -221,32 +223,38 @@ func main() {
 	// sort the map into a sorted pairlist
 	sortedDailyDollarRevenue := SortMapByValue(dailyDollarRevenue)
 
+	// Print the coins and their revenue
 	fmt.Println("\nDaily $ revenue (BTC price: " + bitcoin[0].Price_USD + ")")
 	for i := 0; i < len(sortedDailyDollarRevenue); i++ {
 		fmt.Printf("%s = %f\n", sortedDailyDollarRevenue[i].key, sortedDailyDollarRevenue[i].value)
 	}
 
+	// Get the miners scripts in the minerDirectory
 	minersDirectory = filepath.Clean(minersDirectory)
 	files, err := ioutil.ReadDir(minersDirectory)
 	for err != nil {
 		log.Fatal(err)
 	}
 
-	minersScripts := make([]string, 10)
-	for i, file := range files {
-		fmt.Printf("minersScripts[%v] =  %v\n", i, file.Name())
-		minersScripts[i] = file.Name()
-	}
-
-	bestRevenue := -1000.0
-	var bestCoin string
-	for _, minerScriptName := range minersScripts {
-		coinName := strings.Split(minerScriptName, ".")[0]
-		if dailyDollarRevenue[coinName] > bestRevenue {
-			bestCoin = coinName
-			bestRevenue = dailyDollarRevenue[coinName]
+	// Create a map of type: map[coin name] = script name
+	minersScripts := make(map[string]string, len(files))
+	for _, file := range files {
+		re, err := regexp.Compile(REGEXP)
+		if err != nil {
+			log.Fatal("Regex can't be compiled")
+		}
+		if result := re.FindString(file.Name()); result != "" {
+			minersScripts[strings.ToLower(result)] = file.Name()
 		}
 	}
-	fmt.Println("The best coin is: " + bestCoin + " with $ " + strconv.FormatFloat(bestRevenue, 'f', 6, 64) + " of revenue")
 
+	// Select the most profitable coin from the corresponding mining scripts available
+	var bestCoin string
+	for i := 0; i < len(sortedDailyDollarRevenue); i++ {
+		bestCoin = minersScripts[strings.ToLower(sortedDailyDollarRevenue[i].key)]
+		if bestCoin != "" {
+			fmt.Println("Most profitable is: " + bestCoin)
+			break
+		}
+	}
 }

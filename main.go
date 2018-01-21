@@ -70,54 +70,16 @@ func calculateHashRateAndPowerForRig(totalGPUsDevices map[string]uint64) GPU {
 
 		// Multiply each algorithm explicilty per the number of GPUs
 		// Another way of doing it is using reflection to iterate over the fields of the structure
-
-		// // Ethash
-		gpu.Ethash.HashRate *= float64(totalGPUsDevices[k])
-		gpu.Ethash.Power *= float64(totalGPUsDevices[k])
-
-		// // Groestl
-		gpu.Groestl.HashRate *= float64(totalGPUsDevices[k])
-		gpu.Groestl.Power *= float64(totalGPUsDevices[k])
-
-		// // X12Gost
-		gpu.X11Gost.HashRate *= float64(totalGPUsDevices[k])
-		gpu.X11Gost.Power *= float64(totalGPUsDevices[k])
-
-		// // CryptoNight
-		gpu.CryptoNight.HashRate *= float64(totalGPUsDevices[k])
-		gpu.CryptoNight.Power *= float64(totalGPUsDevices[k])
-
-		// // Equihash
-		gpu.Equihash.HashRate *= float64(totalGPUsDevices[k])
-		gpu.Equihash.Power *= float64(totalGPUsDevices[k])
-
-		// // Lyra2REv2
-		gpu.Lyra2REv2.HashRate *= float64(totalGPUsDevices[k])
-		gpu.Lyra2REv2.Power *= float64(totalGPUsDevices[k])
-
-		// // NeoScrypt
-		gpu.NeoScrypt.HashRate *= float64(totalGPUsDevices[k])
-		gpu.NeoScrypt.Power *= float64(totalGPUsDevices[k])
-
-		// // LBRY
-		gpu.LBRY.HashRate *= float64(totalGPUsDevices[k])
-		gpu.LBRY.Power *= float64(totalGPUsDevices[k])
-
-		// // Blake2b
-		gpu.Blake2b.HashRate *= float64(totalGPUsDevices[k])
-		gpu.Blake2b.Power *= float64(totalGPUsDevices[k])
-
-		// // Blake14r
-		gpu.Blake14r.HashRate *= float64(totalGPUsDevices[k])
-		gpu.Blake14r.Power *= float64(totalGPUsDevices[k])
-
-		// // Pascal
-		gpu.Pascal.HashRate *= float64(totalGPUsDevices[k])
-		gpu.Pascal.Power *= float64(totalGPUsDevices[k])
-
-		// // Skunkhash
-		gpu.Skunkhash.HashRate *= float64(totalGPUsDevices[k])
-		gpu.Skunkhash.Power *= float64(totalGPUsDevices[k])
+		r := reflect.ValueOf(&gpu)
+		e := r.Elem()
+		for i := 0; i < e.NumField(); i++ {
+			castedAlgo, ok := e.Field(i).Interface().(Algorithm)
+			checkFatalError(ok)
+			castedAlgo.HashRate *= float64(totalGPUsDevices[k])
+			castedAlgo.Power *= float64(totalGPUsDevices[k])
+			castedAlgoAsValue := reflect.ValueOf(castedAlgo)
+			e.Field(i).Set(castedAlgoAsValue)
+		}
 
 		// store back the total GPU Characteristics
 		partialGPUsCharacteristics[k] = gpu
@@ -125,55 +87,22 @@ func calculateHashRateAndPowerForRig(totalGPUsDevices map[string]uint64) GPU {
 
 	// instance GPU that contains the total hashing rate and power for all the GPUS listed in conf.json
 	var totalGPUsCharacteristics GPU
+	totalReflect := reflect.ValueOf(&totalGPUsCharacteristics)
+	totalReflectElem := totalReflect.Elem()
 	for _, v := range partialGPUsCharacteristics {
+		partialReflect := reflect.ValueOf(v)
 
-		// // Ethash
-		totalGPUsCharacteristics.Ethash.HashRate += v.Ethash.HashRate
-		totalGPUsCharacteristics.Ethash.Power += v.Ethash.Power
+		for i := 0; i < totalReflectElem.NumField(); i++ {
+			castedPartialAlgo, ok := partialReflect.Field(i).Interface().(Algorithm)
+			checkFatalError(err)
+			castedTotalAlgo, ok := totalReflectElem.Field(i).Interface().(Algorithm)
+			checkFatalError(err)
 
-		// // Groestl
-		totalGPUsCharacteristics.Groestl.HashRate += v.Groestl.HashRate
-		totalGPUsCharacteristics.Groestl.Power += v.Groestl.Power
-
-		// // X11Gost
-		totalGPUsCharacteristics.X11Gost.HashRate += v.X11Gost.HashRate
-		totalGPUsCharacteristics.X11Gost.Power += v.X11Gost.Power
-
-		// // CryptoNight
-		totalGPUsCharacteristics.CryptoNight.HashRate += v.CryptoNight.HashRate
-		totalGPUsCharacteristics.CryptoNight.Power += v.CryptoNight.Power
-
-		// // Equihash
-		totalGPUsCharacteristics.Equihash.HashRate += v.Equihash.HashRate
-		totalGPUsCharacteristics.Equihash.Power += v.Equihash.Power
-
-		// // Lyra2REv2
-		totalGPUsCharacteristics.Lyra2REv2.HashRate += v.Lyra2REv2.HashRate
-		totalGPUsCharacteristics.Lyra2REv2.Power += v.Lyra2REv2.Power
-
-		// // NeoScrypt
-		totalGPUsCharacteristics.NeoScrypt.HashRate += v.NeoScrypt.HashRate
-		totalGPUsCharacteristics.NeoScrypt.Power += v.NeoScrypt.Power
-
-		// // LBRY
-		totalGPUsCharacteristics.LBRY.HashRate += v.LBRY.HashRate
-		totalGPUsCharacteristics.LBRY.Power += v.LBRY.Power
-
-		// // Blake2b
-		totalGPUsCharacteristics.Blake2b.HashRate += v.Blake2b.HashRate
-		totalGPUsCharacteristics.Blake2b.Power += v.Blake2b.Power
-
-		// // Blake14r
-		totalGPUsCharacteristics.Blake14r.HashRate += v.Blake14r.HashRate
-		totalGPUsCharacteristics.Blake14r.Power += v.Blake14r.Power
-
-		// // Pascal
-		totalGPUsCharacteristics.Pascal.HashRate += v.Pascal.HashRate
-		totalGPUsCharacteristics.Pascal.Power += v.Pascal.Power
-
-		// // Skunkhash
-		totalGPUsCharacteristics.Skunkhash.HashRate += v.Skunkhash.HashRate
-		totalGPUsCharacteristics.Skunkhash.Power += v.Skunkhash.Power
+			castedTotalAlgo.HashRate += castedPartialAlgo.HashRate
+			castedTotalAlgo.Power += castedPartialAlgo.Power
+			castedTotalAlgoAsValue := reflect.ValueOf(castedTotalAlgo)
+			totalReflectElem.Field(i).Set(castedTotalAlgoAsValue)
+		}
 	}
 	return totalGPUsCharacteristics
 }
@@ -214,7 +143,7 @@ func main() {
 	cmd.Start()
 
 	// now we need to start that script if it is not started
-	// and loop for
+	// and loop forever
 	ticker := time.NewTicker(time.Minute * 5)
 	// go checkAndRun(ticker, url, bestCoin)
 	for t := range ticker.C {
@@ -244,7 +173,7 @@ func checkFatalError(err error) {
 	}
 }
 
-// Returns the most
+// Returns the most profitable script filename
 func getMostProfitableCoin(url string, regexp *Regexp, config ConfigFileJson) string {
 	// read json from url
 	var coins Coins

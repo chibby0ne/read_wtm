@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"flag"
 	"io/ioutil"
 	"log"
 )
@@ -43,13 +44,23 @@ Example configuration file:
     "miner_directory": "C:\Users\username\miners"
 }
 */
-func readConfig(configFile string, target interface{}) {
+// Read config file, unmarshall the json into a struct and return the struct
+func readConfig(configFile string) ConfigFileJson {
+	var target ConfigFileJson
 	configFileContent, err := ioutil.ReadFile(configFile)
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = json.Unmarshal(configFileContent, target)
+	err = json.Unmarshal(configFileContent, &target)
 	if err != nil {
 		log.Fatal(err)
 	}
+	return target
+}
+
+// Check the parse the command line arguments and call return the config file structure
+func parseConfig() ConfigFileJson {
+	configFilePathPtr := flag.String("config", "./conf.json", "Config file with mining rig specs")
+	flag.Parse()
+	return readConfig(*configFilePathPtr)
 }

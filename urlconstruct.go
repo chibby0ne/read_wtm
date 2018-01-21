@@ -1,19 +1,18 @@
 package main
 
-
 import (
-    "bytes"
-    "strings"
-    "strconv"
+	"bytes"
+	"strconv"
+	"strings"
 )
 
 const (
-    urlBase string = "https://whattomine.com/coins.json?utf8=%E2%9C%93&"
-    trueString string = "=true&"
+	urlBase    string = "https://whattomine.com/coins.json?utf8=%E2%9C%93&"
+	trueString string = "=true&"
 )
 
 // appends the strings adaptString and numberOfGPUs
-// additionally appends 
+// additionally appends
 func writeOneParameterQuery(buffer *bytes.Buffer, adaptString, numberOfGPUs string) {
 	buffer.WriteString(adaptString)
 	buffer.WriteString(numberOfGPUs)
@@ -26,7 +25,8 @@ func writeOneParameterQuery(buffer *bytes.Buffer, adaptString, numberOfGPUs stri
 	}
 }
 
-func constructUrlQuery() string {
+// Build the url with the query parameters for use in www.whattomine.com
+func constructUrlQuery(config ConfigFileJson, totalGPUsCharacteristics GPU) string {
 	var buffer bytes.Buffer
 	buffer.WriteString(urlBase)
 	writeOneParameterQuery(&buffer, "adapt_q_280x=", strconv.FormatUint(config.GPU.GPU280x, 10))
@@ -166,5 +166,3 @@ func constructUrlQuery() string {
 	buffer.WriteString("factor%5Bexchanges%5D%5B%5D=yobit&dataset=Main&commit=Calculate")
 	return buffer.String()
 }
-
-

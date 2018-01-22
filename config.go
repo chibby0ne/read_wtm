@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"flag"
 	"io/ioutil"
-	"log"
 )
 
 // Json representation of config file

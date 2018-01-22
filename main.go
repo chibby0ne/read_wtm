@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -74,7 +75,7 @@ func calculateHashRateAndPowerForRig(totalGPUsDevices map[string]uint64) GPU {
 		e := r.Elem()
 		for i := 0; i < e.NumField(); i++ {
 			castedAlgo, ok := e.Field(i).Interface().(Algorithm)
-			checkFatalError(ok)
+			checkFatalBool(ok)
 			castedAlgo.HashRate *= float64(totalGPUsDevices[k])
 			castedAlgo.Power *= float64(totalGPUsDevices[k])
 			castedAlgoAsValue := reflect.ValueOf(castedAlgo)
@@ -94,9 +95,9 @@ func calculateHashRateAndPowerForRig(totalGPUsDevices map[string]uint64) GPU {
 
 		for i := 0; i < totalReflectElem.NumField(); i++ {
 			castedPartialAlgo, ok := partialReflect.Field(i).Interface().(Algorithm)
-			checkFatalError(err)
+			checkFatalBool(ok)
 			castedTotalAlgo, ok := totalReflectElem.Field(i).Interface().(Algorithm)
-			checkFatalError(err)
+			checkFatalBool(ok)
 
 			castedTotalAlgo.HashRate += castedPartialAlgo.HashRate
 			castedTotalAlgo.Power += castedPartialAlgo.Power
@@ -136,7 +137,7 @@ func main() {
 	url := constructUrlQuery(config, totalGPUsCharacteristics)
 
 	regexp := compileRegex()
-	getMostProfitableCoin(url, regexp, config)
+	bestCoin := getMostProfitableCoin(url, regexp, config)
 
 	log.Println("Starting to mine: " + bestCoin)
 	cmd := exec.Command(bestCoin)
@@ -144,10 +145,10 @@ func main() {
 
 	// now we need to start that script if it is not started
 	// and loop forever
-	ticker := time.NewTicker(time.Minute * 5)
+	ticker := time.NewTicker(time.Second * 30)
 	// go checkAndRun(ticker, url, bestCoin)
-	for t := range ticker.C {
-		log.Println("Checking for new best coin at: ", t)
+	for _ := range ticker.C {
+		log.Println("Checking for new best coin")
 		// checked new bestCoin
 		newBestCoin := getMostProfitableCoin(url, regexp, config)
 		if bestCoin != newBestCoin {
@@ -160,7 +161,7 @@ func main() {
 }
 
 // Returns the compiled regexp
-func compileRegex() *Regexp {
+func compileRegex() *regexp.Regexp {
 	re, err := regexp.Compile(REGEXP)
 	checkFatalError(err)
 	return re
@@ -173,8 +174,15 @@ func checkFatalError(err error) {
 	}
 }
 
+// checks for err and return log fatal if any error
+func checkFatalBool(ok bool) {
+	if !ok {
+		log.Fatal("Error")
+	}
+}
+
 // Returns the most profitable script filename
-func getMostProfitableCoin(url string, regexp *Regexp, config ConfigFileJson) string {
+func getMostProfitableCoin(url string, regexp *regexp.Regexp, config ConfigFileJson) string {
 	// read json from url
 	var coins Coins
 	readJsonFromUrl(url, &coins)
@@ -198,7 +206,7 @@ func getMostProfitableCoin(url string, regexp *Regexp, config ConfigFileJson) st
 	// Print the coins and their revenue
 	log.Println("Daily $ revenue (BTC price: " + bitcoin[0].Price_USD + ")")
 	for i := 0; i < len(sortedDailyDollarRevenue); i++ {
-		log.Println(sortedDailyDollarRevenue[i].key + " = " + sortedDailyDollarRevenue[i].value)
+		log.Println(sortedDailyDollarRevenue[i].key + " = " + strconv.FormatFloat(sortedDailyDollarRevenue[i].value, 'f', -1, 64))
 	}
 
 	// Get the miners scripts in the minerDirectory

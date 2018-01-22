@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"io/ioutil"
 	"log"
 	"os/exec"
@@ -207,60 +206,9 @@ func main() {
 	// read current values from www.whattomine.com
 	url := constructUrlQuery(config, totalGPUsCharacteristics)
 
-	// read json from url
-	var coins Coins
-	readJsonFromUrl(url, &coins)
+	regexp := compileRegex()
+	getMostProfitableCoin(url, regexp, config)
 
-	// read current value of bitcoin
-	bitcoin := make([]CoinMarketCapCoin, 0)
-	readJsonFromUrl(BITCOINURL, &bitcoin)
-
-	// Create map 'coinName' -> USD revenue 24 hr
-	dailyDollarRevenue := make(map[string]float64)
-
-	// Convert bitcoin price to float64
-	bitcoinPrice := convertToFloat64(bitcoin[0].Price_USD)
-	for coinName, coinContent := range coins.Coins {
-		dailyDollarRevenue[coinName] = convertToFloat64(coinContent.Btc_revenue24) * bitcoinPrice
-	}
-
-	// sort the map into a sorted pairlist
-	sortedDailyDollarRevenue := SortMapByValue(dailyDollarRevenue)
-
-	// Print the coins and their revenue
-	fmt.Println("Daily $ revenue (BTC price: " + bitcoin[0].Price_USD + ")")
-	for i := 0; i < len(sortedDailyDollarRevenue); i++ {
-		fmt.Printf("%s = %f\n", sortedDailyDollarRevenue[i].key, sortedDailyDollarRevenue[i].value)
-	}
-
-	// Get the miners scripts in the minerDirectory
-	minersDirectory := filepath.Clean(config.MinerDirectory)
-	files, err := ioutil.ReadDir(minersDirectory)
-	for err != nil {
-		log.Fatal(err)
-	}
-
-	// Create a map of type: map[coin name] = script name
-	minersScripts := make(map[string]string, len(files))
-	for _, file := range files {
-		re, err := regexp.Compile(REGEXP)
-		if err != nil {
-			log.Fatal("Regex can't be compiled")
-		}
-		if result := re.FindString(file.Name()); result != "" {
-			minersScripts[strings.ToLower(result)] = file.Name()
-		}
-	}
-
-	// Select the most profitable coin from the corresponding mining scripts available
-	var bestCoin string
-	for i := 0; i < len(sortedDailyDollarRevenue); i++ {
-		bestCoin = minersScripts[strings.ToLower(sortedDailyDollarRevenue[i].key)]
-		if bestCoin != "" {
-			fmt.Println("Most profitable is: " + bestCoin)
-			break
-		}
-	}
 	log.Println("Starting to mine: " + bestCoin)
 	cmd := exec.Command(bestCoin)
 	cmd.Start()
@@ -272,7 +220,7 @@ func main() {
 	for t := range ticker.C {
 		log.Println("Checking for new best coin at: ", t)
 		// checked new bestCoin
-		newBestCoin := getMostProfitableCoin(url, config)
+		newBestCoin := getMostProfitableCoin(url, regexp, config)
 		if bestCoin != newBestCoin {
 			// start new bestCoin
 			log.Println("Starting to mine: " + bestCoin)
@@ -280,24 +228,24 @@ func main() {
 			cmd.Start()
 		}
 	}
-
 }
 
-// func checkAndRun(ticker *time.Ticker, url, bestCoin string) {
-//     for t := range ticker.C {
-//         log.Println("Checking for new best coin at: ", t)
-//         // checked new bestCoin
-//         newBestCoin := getMostProfitableCoin(url)
-//         if bestCoin != newBestCoin {
-//             // start new bestCoin
-//             cmd := exec.Command(bestCoin)
-//             cmd.Start()
-//         }
-//     }
+// Returns the compiled regexp
+func compileRegex() *Regexp {
+	re, err := regexp.Compile(REGEXP)
+	checkFatalError(err)
+	return re
+}
 
-// }
+// checks for err and return log fatal if any error
+func checkFatalError(err error) {
+	if err != nil {
+		log.Fatal(err)
+	}
+}
 
-func getMostProfitableCoin(url string, config ConfigFileJson) string {
+// Returns the most
+func getMostProfitableCoin(url string, regexp *Regexp, config ConfigFileJson) string {
 	// read json from url
 	var coins Coins
 	readJsonFromUrl(url, &coins)
@@ -319,26 +267,20 @@ func getMostProfitableCoin(url string, config ConfigFileJson) string {
 	sortedDailyDollarRevenue := SortMapByValue(dailyDollarRevenue)
 
 	// Print the coins and their revenue
-	fmt.Println("Daily $ revenue (BTC price: " + bitcoin[0].Price_USD + ")")
+	log.Println("Daily $ revenue (BTC price: " + bitcoin[0].Price_USD + ")")
 	for i := 0; i < len(sortedDailyDollarRevenue); i++ {
-		fmt.Printf("%s = %f\n", sortedDailyDollarRevenue[i].key, sortedDailyDollarRevenue[i].value)
+		log.Println(sortedDailyDollarRevenue[i].key + " = " + sortedDailyDollarRevenue[i].value)
 	}
 
 	// Get the miners scripts in the minerDirectory
 	minerDirectory := filepath.Clean(config.MinerDirectory)
 	files, err := ioutil.ReadDir(minerDirectory)
-	for err != nil {
-		log.Fatal(err)
-	}
+	checkFatalError(err)
 
 	// Create a map of type: map[coin name] = script name
 	minersScripts := make(map[string]string, len(files))
 	for _, file := range files {
-		re, err := regexp.Compile(REGEXP)
-		if err != nil {
-			log.Fatal("Regex can't be compiled")
-		}
-		if result := re.FindString(file.Name()); result != "" {
+		if result := regexp.FindString(file.Name()); result != "" {
 			minersScripts[strings.ToLower(result)] = file.Name()
 		}
 	}
@@ -348,7 +290,7 @@ func getMostProfitableCoin(url string, config ConfigFileJson) string {
 	for i := 0; i < len(sortedDailyDollarRevenue); i++ {
 		bestCoin = minersScripts[strings.ToLower(sortedDailyDollarRevenue[i].key)]
 		if bestCoin != "" {
-			fmt.Println("Most profitable is: " + bestCoin)
+			log.Println("Most profitable is: " + bestCoin)
 			break
 		}
 	}

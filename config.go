@@ -48,13 +48,9 @@ Example configuration file:
 func readConfig(configFile string) ConfigFileJson {
 	var target ConfigFileJson
 	configFileContent, err := ioutil.ReadFile(configFile)
-	if err != nil {
-		log.Fatal(err)
-	}
+	checkFatalError(err)
 	err = json.Unmarshal(configFileContent, &target)
-	if err != nil {
-		log.Fatal(err)
-	}
+	checkFatalError(err)
 	return target
 }
 

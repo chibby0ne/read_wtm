@@ -112,24 +112,18 @@ var myClient = &http.Client{Timeout: 10 * time.Second}
 func readJsonFromUrl(url string, target interface{}) {
 	// Get request to the site, and defer closing body
 	response, err := myClient.Get(url)
-	if err != nil {
-		log.Fatal(err)
-	}
+	checkFatalError(err)
 	defer response.Body.Close()
 
 	// read all body of page
 	responseData, err := ioutil.ReadAll(response.Body)
-	if err != nil {
-		log.Fatal(err)
-	}
+	checkFatalError(err)
 	json.Unmarshal(responseData, target)
 }
 
 // Converts string to float64 and returns float64. Includes error handling
 func convertToFloat64(s string) float64 {
 	f, err := strconv.ParseFloat(s, 64)
-	if err != nil {
-		log.Fatal(err)
-	}
+	checkFatalError(err)
 	return f
 }

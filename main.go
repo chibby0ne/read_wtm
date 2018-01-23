@@ -147,7 +147,7 @@ func main() {
 	// and loop forever
 	ticker := time.NewTicker(time.Second * 30)
 	// go checkAndRun(ticker, url, bestCoin)
-	for _ := range ticker.C {
+	for _ = range ticker.C {
 		log.Println("Checking for new best coin")
 		// checked new bestCoin
 		newBestCoin := getMostProfitableCoin(url, regexp, config)

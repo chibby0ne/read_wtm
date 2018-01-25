@@ -13,12 +13,12 @@ import (
 )
 
 const (
-	REGEXP = `([G|g]obyte|[E|e]thereum|[T|t]rezarcoin|[Z|z]cash|[Z|z]classic|[Z|z]encash)`
+	coinsRegexp = `([G|g]obyte|[E|e]thereum|[T|t]rezarcoin|[Z|z]cash|[Z|z]classic|[Z|z]encash)`
 )
 
 func init() {
 	// array that contains names of gpus
-	var GPU_Names [NUMBER_OF_GPUS]string
+	var GPU_Names [numOfGPUs]string
 	// initialize array that contains names of gpus
 	GPU_Names[0] = "GPU280x"
 	GPU_Names[1] = "GPU380"
@@ -37,7 +37,7 @@ func init() {
 	GPU_Names[14] = "GPU1080Ti"
 
 	// initilize array that contains GPU characteristics in an order corresponding the name written in the GPU_Names array
-	var GPU_HashRates [NUMBER_OF_GPUS]GPU
+	var GPU_HashRates [numOfGPUs]GPU
 	GPU_HashRates[0] = GPU280x
 	GPU_HashRates[1] = GPU380
 	GPU_HashRates[2] = GPUFury
@@ -75,7 +75,7 @@ func calculateHashRateAndPowerForRig(totalGPUsDevices map[string]uint64) GPU {
 		e := r.Elem()
 		for i := 0; i < e.NumField(); i++ {
 			castedAlgo, ok := e.Field(i).Interface().(Algorithm)
-			checkFatalBool(ok)
+			checkFatalTypeAssertion(ok)
 			castedAlgo.HashRate *= float64(totalGPUsDevices[k])
 			castedAlgo.Power *= float64(totalGPUsDevices[k])
 			castedAlgoAsValue := reflect.ValueOf(castedAlgo)
@@ -95,9 +95,9 @@ func calculateHashRateAndPowerForRig(totalGPUsDevices map[string]uint64) GPU {
 
 		for i := 0; i < totalReflectElem.NumField(); i++ {
 			castedPartialAlgo, ok := partialReflect.Field(i).Interface().(Algorithm)
-			checkFatalBool(ok)
+			checkFatalTypeAssertion(ok)
 			castedTotalAlgo, ok := totalReflectElem.Field(i).Interface().(Algorithm)
-			checkFatalBool(ok)
+			checkFatalTypeAssertion(ok)
 
 			castedTotalAlgo.HashRate += castedPartialAlgo.HashRate
 			castedTotalAlgo.Power += castedPartialAlgo.Power
@@ -162,7 +162,7 @@ func main() {
 
 // Returns the compiled regexp
 func compileRegex() *regexp.Regexp {
-	re, err := regexp.Compile(REGEXP)
+	re, err := regexp.Compile(coinsRegexp)
 	checkFatalError(err)
 	return re
 }
@@ -175,9 +175,9 @@ func checkFatalError(err error) {
 }
 
 // checks for err and return log fatal if any error
-func checkFatalBool(ok bool) {
+func checkFatalTypeAssertion(ok bool) {
 	if !ok {
-		log.Fatal("Error")
+		log.Fatal("Type assertion failed")
 	}
 }
 
@@ -189,7 +189,7 @@ func getMostProfitableCoin(url string, regexp *regexp.Regexp, config ConfigFileJ
 
 	// read current value of bitcoin
 	bitcoin := make([]CoinMarketCapCoin, 0)
-	readJsonFromUrl(BITCOINURL, &bitcoin)
+	readJsonFromUrl(bitcoinUrl, &bitcoin)
 
 	// Create map 'coinName' -> USD revenue 24 hr
 	dailyDollarRevenue := make(map[string]float64)

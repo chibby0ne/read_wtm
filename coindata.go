@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	BITCOINURL string = "https://api.coinmarketcap.com/v1/ticker/bitcoin/"
+	bitcoinUrl string = "https://api.coinmarketcap.com/v1/ticker/bitcoin/"
 )
 
 // Struct type that represents one coin from www.whattomine.com

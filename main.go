@@ -137,15 +137,19 @@ func main() {
 	url := constructUrlQuery(config, totalGPUsCharacteristics)
 
 	regexp := compileRegex()
-	bestCoin := getMostProfitableCoin(url, regexp, config)
+
+	log.Println("Checking for new best coin")
+
+	var bestCoin string
+	bestCoin = getMostProfitableCoin(url, regexp, config)
 
 	log.Println("Starting to mine: " + bestCoin)
 	cmd := exec.Command(bestCoin)
-	cmd.Start()
+	checkFatalError(cmd.Start())
 
 	// now we need to start that script if it is not started
 	// and loop forever
-	ticker := time.NewTicker(time.Second * 30)
+	ticker := time.NewTicker(time.Minute * 5)
 	// go checkAndRun(ticker, url, bestCoin)
 	for _ = range ticker.C {
 		log.Println("Checking for new best coin")
@@ -153,9 +157,12 @@ func main() {
 		newBestCoin := getMostProfitableCoin(url, regexp, config)
 		if bestCoin != newBestCoin {
 			// start new bestCoin
-			log.Println("Starting to mine: " + bestCoin)
-			cmd := exec.Command(bestCoin)
-			cmd.Start()
+			log.Println("Starting to mine: " + newBestCoin)
+			cmd := exec.Command(newBestCoin)
+			checkFatalError(cmd.Start())
+			bestCoin = newBestCoin
+		} else {
+			log.Println("Still mining " + bestCoin)
 		}
 	}
 }
@@ -231,5 +238,5 @@ func getMostProfitableCoin(url string, regexp *regexp.Regexp, config ConfigFileJ
 			break
 		}
 	}
-	return bestCoin
+	return minerDirectory + string(filepath.Separator) + bestCoin
 }

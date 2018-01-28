@@ -44,7 +44,7 @@ func TestSortMapByValue(t *testing.T) {
 		actualResult := SortMapByValue(value.input)
 		expectedResult := value.expectedOutput
 		if !testEqualityPairList(expectedResult, actualResult) {
-			t.Fatalf("Expected: %s\nbut got %s\n", expectedResult, actualResult)
+			t.Fatalf("Expected: %v but got %v\n", expectedResult, actualResult)
 		}
 	}
 }
